@@ -1,0 +1,63 @@
+version: "3.9"
+services:
+# Service applicatif Node.js
+  web:
+    build: .
+    ports:
+    # Mapper le port 8080 local vers le port 8080 du conteneur
+      - "8080:8080"
+    environment:
+      - APP_ENV=development
+      # Nom du service PostgreSQL (résolution DNS automatique par Docker)
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=ynov_db
+      - DB_USER=ynov
+      - DB_PASSWORD=secret_password
+      - REDIS_HOST=cache
+      - REDIS_PORT=6379
+    depends_on:
+      db:
+      # Attendre que le healthcheck PostgreSQL soit healthy
+        condition: service_healthy
+    networks:
+      - app-network
+# Service PostgreSQL
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=ynov_db
+      - POSTGRES_USER=ynov
+      - POSTGRES_PASSWORD=secret_password
+    volumes:
+    # Volume nommé pour la persistance des données
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ynov -d ynov_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  cache:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - app-network    
+      
+# Définition des volumes nommés
+volumes:
+  pgdata:
+
+# Définition du réseau dédié
+networks:
+  app-network:
+    driver: bridge

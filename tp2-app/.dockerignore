@@ -1,0 +1,9 @@
+node_modules
+dist
+*.log
+.env
+# Exclure le dossier .git
+.git
+*.md
+Dockerfile*
+docker-compose*
